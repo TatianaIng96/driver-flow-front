@@ -2,44 +2,41 @@ import { useState } from 'react';
 import { LogIn, Lock, Mail, ArrowRight, Truck, Zap, Shield, Users, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { User } from '../App';
+import { useLoginMutation } from '../services/auth';
+import { useAppDispatch } from '../hooks';
+import { setCredentials } from '../features/auth/authSlice';
 
-interface LoginProps {
+interface LoginPageProps {
   onLogin: (user: User) => void;
 }
 
-export function Login({ onLogin }: LoginProps) {
+export function LoginPage({ onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [login, { isLoading, error }] = useLoginMutation();
+  const dispatch = useAppDispatch();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
-    // Simular delay de autenticación
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // Llamar al endpoint de login con credenciales reales
+      const response = await login({ email, password }).unwrap();
 
-    // Simulación de login - determinar rol según email
-    if (email.includes('admin')) {
-      onLogin({
-        id: 'superadmin-1',
-        name: 'Super Administrador',
-        email: email,
-        role: 'super_admin',
-      });
-    } else {
-      // Simular operador - en producción vendría de la BD
-      onLogin({
-        id: 'user-1',
-        name: 'Juan Operador',
-        email: email,
-        role: 'operator',
-        operatorId: 'op1',
-      });
+      // Guardar token y usuario en Redux (automáticamente también se guarda en localStorage)
+      dispatch(setCredentials({
+        token: response.token,
+        user: response.user,
+      }));
+
+      // Llamar al callback onLogin para actualizar el estado local de App
+      onLogin(response.user);
+    } catch (err) {
+      console.error('Error al iniciar sesión:', err);
+      // El error se muestra automáticamente más abajo
     }
-    setIsLoading(false);
   };
 
   const handleRecovery = (e: React.FormEvent) => {
@@ -52,13 +49,13 @@ export function Login({ onLogin }: LoginProps) {
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
       {/* Background con imagen y overlay */}
       <div className="absolute inset-0 z-0">
-        <img 
+        <img
           src="https://images.unsplash.com/photo-1558957543-ab3e457707a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb2dpc3RpY3MlMjB0cnVjayUyMHRyYW5zcG9ydHxlbnwxfHx8fDE3NjM5NzgzMjJ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
           alt="Transport background"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/95 via-purple-900/90 to-indigo-900/95" />
-        
+
         {/* Animated shapes */}
         <motion.div
           className="absolute top-20 left-20 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl"
@@ -88,14 +85,14 @@ export function Login({ onLogin }: LoginProps) {
 
       <div className="w-full max-w-6xl relative z-10 grid lg:grid-cols-2 gap-8 items-center">
         {/* Panel Izquierdo - Branding y Features */}
-        <motion.div 
+        <motion.div
           className="text-white hidden lg:block"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
         >
           <div className="mb-8">
-            <motion.div 
+            <motion.div
               className="inline-flex items-center gap-3 mb-6"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -109,8 +106,8 @@ export function Login({ onLogin }: LoginProps) {
                 <p className="text-blue-200">Powered by Baileys</p>
               </div>
             </motion.div>
-            
-            <motion.p 
+
+            <motion.p
               className="text-2xl text-blue-100 mb-8 leading-relaxed"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -234,11 +231,13 @@ export function Login({ onLogin }: LoginProps) {
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-                    <p className="text-blue-900 text-sm">
-                      💡 <strong>Modo Demo:</strong> Usa "admin@..." para Super Admin o cualquier otro email para Operador
-                    </p>
-                  </div>
+                  {error && (
+                    <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                      <p className="text-red-900 text-sm">
+                        ❌ <strong>Error:</strong> {'data' in error && error.data ? String(error.data) : 'Credenciales inválidas'}
+                      </p>
+                    </div>
+                  )}
 
                   <button
                     type="button"

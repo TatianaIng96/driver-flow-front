@@ -5,19 +5,20 @@ import {
   LogOut,
   Shield,
 } from 'lucide-react';
-
-interface SuperAdminSidebarProps {
-  currentView: string;
-  onNavigate: (view: string) => void;
-}
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useLogout } from '../../hooks/useLogout';
 
 const menuItems = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { id: 'operators', icon: Users, label: 'Usuarios Operativos' },
-  { id: 'settings', icon: Settings, label: 'Configuración' },
+  { id: 'dashboard', path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'operators', path: '/admin/operators', icon: Users, label: 'Usuarios Operativos' },
+  { id: 'settings', path: '/admin/settings', icon: Settings, label: 'Configuración' },
 ];
 
-export function SuperAdminSidebar({ currentView, onNavigate }: SuperAdminSidebarProps) {
+export function SuperAdminSidebar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { logout } = useLogout();
+
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
       {/* Logo */}
@@ -46,12 +47,12 @@ export function SuperAdminSidebar({ currentView, onNavigate }: SuperAdminSidebar
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentView === item.id;
-          
+          const isActive = location.pathname.startsWith(item.path);
+
           return (
             <button
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => navigate(item.path)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 isActive
                   ? 'bg-blue-50 text-blue-600'
@@ -68,7 +69,7 @@ export function SuperAdminSidebar({ currentView, onNavigate }: SuperAdminSidebar
       {/* Logout */}
       <div className="p-4 border-t border-gray-200">
         <button
-          onClick={() => window.location.reload()}
+          onClick={logout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
         >
           <LogOut className="w-5 h-5" />

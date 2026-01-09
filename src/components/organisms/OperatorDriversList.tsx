@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Plus, Users, Ban, MapPin } from 'lucide-react';
-import { AddMemberModal } from './AddMemberModal';
+import { AddMemberModal } from '../molecules';
 import type { Driver, Group } from '../App';
 
 interface OperatorDriversListProps {

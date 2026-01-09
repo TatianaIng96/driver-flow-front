@@ -9,24 +9,28 @@ import {
   User,
   Smartphone,
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useLogout } from '../../hooks/useLogout';
 
 interface OperatorSidebarProps {
-  currentView: string;
-  onNavigate: (view: string) => void;
   userName: string;
 }
 
 const menuItems = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { id: 'whatsapp', icon: Smartphone, label: 'Conexión WhatsApp' },
-  { id: 'drivers', icon: Users, label: 'Conductores' },
-  { id: 'clients', icon: Building2, label: 'Clientes' },
-  { id: 'groups', icon: MessageSquare, label: 'Grupos WhatsApp' },
-  { id: 'banned', icon: Ban, label: 'Números Vetados' },
-  { id: 'settings', icon: Settings, label: 'Configuración' },
+  { id: 'dashboard', path: '/operator/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'whatsapp', path: '/operator/whatsapp', icon: Smartphone, label: 'Conexión WhatsApp' },
+  { id: 'drivers', path: '/operator/drivers', icon: Users, label: 'Conductores' },
+  { id: 'clients', path: '/operator/clients', icon: Building2, label: 'Clientes' },
+  { id: 'groups', path: '/operator/groups', icon: MessageSquare, label: 'Grupos WhatsApp' },
+  { id: 'banned', path: '/operator/banned', icon: Ban, label: 'Números Vetados' },
+  { id: 'settings', path: '/operator/settings', icon: Settings, label: 'Configuración' },
 ];
 
-export function OperatorSidebar({ currentView, onNavigate, userName }: OperatorSidebarProps) {
+export function OperatorSidebar({ userName }: OperatorSidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { logout } = useLogout();
+
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
       {/* Logo */}
@@ -61,12 +65,12 @@ export function OperatorSidebar({ currentView, onNavigate, userName }: OperatorS
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentView === item.id;
-          
+          const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+
           return (
             <button
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => navigate(item.path)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 isActive
                   ? 'bg-blue-50 text-blue-600'
@@ -83,7 +87,7 @@ export function OperatorSidebar({ currentView, onNavigate, userName }: OperatorS
       {/* Logout */}
       <div className="p-4 border-t border-gray-200">
         <button
-          onClick={() => window.location.reload()}
+          onClick={logout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
         >
           <LogOut className="w-5 h-5" />

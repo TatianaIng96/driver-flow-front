@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Plus, Building2, Ban } from 'lucide-react';
-import { AddMemberModal } from './AddMemberModal';
+import { AddMemberModal } from '../molecules';
 import type { Client, Group } from '../App';
 
 interface OperatorClientsListProps {

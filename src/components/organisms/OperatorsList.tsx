@@ -1,35 +1,15 @@
 import { useState } from 'react';
 import { Search, Plus, CheckCircle, AlertCircle, Mail, Phone } from 'lucide-react';
-import type { Operator } from '../App';
+import type { Operator } from '../../App';
+import { CreateOperatorModal } from '../molecules/CreateOperatorModal';
 
 interface OperatorsListProps {
   operators: Operator[];
   onSelectOperator: (id: string) => void;
-  onCreateOperator: (name: string, email: string, phone: string) => { success: boolean; message: string };
 }
 
-export function OperatorsList({ operators, onSelectOperator, onCreateOperator }: OperatorsListProps) {
+export function OperatorsList({ operators, onSelectOperator }: OperatorsListProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-
-  const handleCreate = () => {
-    if (!name.trim() || !email.trim() || !phone.trim()) {
-      alert('Todos los campos son obligatorios');
-      return;
-    }
-
-    const result = onCreateOperator(name, email, phone);
-    alert(result.message);
-    
-    if (result.success) {
-      setShowCreateModal(false);
-      setName('');
-      setEmail('');
-      setPhone('');
-    }
-  };
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
@@ -50,7 +30,7 @@ export function OperatorsList({ operators, onSelectOperator, onCreateOperator }:
               className="w-full pl-11 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <button 
+          <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -113,69 +93,11 @@ export function OperatorsList({ operators, onSelectOperator, onCreateOperator }:
         ))}
       </div>
 
-      {/* Modal Crear Operador */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-gray-900 mb-6">Crear Nuevo Operador</h2>
-
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-gray-700 mb-2">Nombre de la Empresa</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej: Transportes Rápidos SA"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 mb-2">Correo Electrónico</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="contacto@empresa.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 mb-2">Teléfono</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+57 300 123 4567"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setName('');
-                  setEmail('');
-                  setPhone('');
-                }}
-                className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleCreate}
-                className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Crear Operador
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal PrimeReact */}
+      <CreateOperatorModal
+        visible={showCreateModal}
+        onHide={() => setShowCreateModal(false)}
+      />
     </div>
   );
 }

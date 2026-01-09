@@ -1,21 +1,12 @@
-import { useState } from 'react';
-import { Login } from './components/Login';
-import { SuperAdminDashboard } from './components/SuperAdminDashboard';
-import { OperatorDashboard } from './components/OperatorDashboard';
-import { OperatorsList } from './components/OperatorsList';
-import { OperatorDetail } from './components/OperatorDetail';
-import { OperatorDriversList } from './components/OperatorDriversList';
-import { OperatorClientsList } from './components/OperatorClientsList';
-import { OperatorGroupsList } from './components/OperatorGroupsList';
-import { OperatorGroupDetail } from './components/OperatorGroupDetail';
-import { OperatorSettings } from './components/OperatorSettings';
-import { AddMemberModal } from './components/AddMemberModal';
-import { WhatsAppConnection } from './components/WhatsAppConnection';
-import { SuperAdminSidebar } from './components/SuperAdminSidebar';
-import { OperatorSidebar } from './components/OperatorSidebar';
+import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { LoginPage } from './pages/LoginPage';
 import { mockOperators } from './data/mockData';
+import { AppRoutes } from './routes';
+import type { RootState } from './store';
 
-export type UserRole = 'super_admin' | 'operator';
+export type UserRole = 'admin' | 'operator';
 
 export type User = {
   id: string;
@@ -113,11 +104,11 @@ export type AppState = {
 };
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const reduxUser = useSelector((state: RootState) => state.auth.user);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState('dashboard');
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 
   const [appState, setAppState] = useState<AppState>({
     operators: mockOperators,
@@ -127,20 +118,128 @@ export default function App() {
     bannedNumbers: [],
   });
 
-  if (!isLoggedIn || !currentUser) {
+  // Verificar sesión al cargar la app
+  useEffect(() => {
+    // Solo verificar si hay un token, no refrescarlo automáticamente
+    // El refresh se hará automáticamente cuando sea necesario en el middleware
+    setIsCheckingAuth(false);
+  }, []); // Solo ejecutar una vez al montar
+
+  // Sincronizar el usuario de Redux con el estado local al cargar o cambiar
+  useEffect(() => {
+    if (reduxUser && !currentUser) {
+      const user: User = {
+        id: reduxUser.id,
+        name: reduxUser.name,
+        email: reduxUser.email,
+        role: reduxUser.role as UserRole,
+        operatorId: reduxUser.operatorId,
+      };
+      setCurrentUser(user);
+
+      // Si es un operador y tiene operatorId, verificar que exista en los datos
+      if (user.role === 'operator' && user.operatorId) {
+        setAppState((prev) => {
+          const operatorExists = prev.operators.some((op) => op.id === user.operatorId);
+
+          if (!operatorExists && user.operatorId) {
+            const newOperator: Operator = {
+              id: user.operatorId,
+              name: user.name,
+              email: user.email,
+              phone: '',
+              createdAt: new Date().toISOString(),
+              isActive: true,
+              settings: {
+                groupBaseName: `Grupo ${user.name}`,
+                groupPhoto: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop',
+                maxClientsPerGroup: 30,
+                botRules: {
+                  onlyActiveDriversCanTakeServices: true,
+                  blockBannedInteraction: true,
+                  autoRemoveFromGroupsOnBan: true,
+                  blockServicesForBannedClients: true,
+                },
+              },
+            };
+
+            console.log('✅ Creando nuevo operador para el usuario:', newOperator);
+
+            return {
+              ...prev,
+              operators: [...prev.operators, newOperator],
+            };
+          }
+
+          return prev;
+        });
+      }
+    }
+  }, [reduxUser, currentUser]);
+
+  // Mostrar loading mientras se verifica la sesión
+  if (isCheckingAuth) {
     return (
-      <Login
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay usuario autenticado, mostrar login
+  if (!reduxUser || !currentUser) {
+    return (
+      <LoginPage
         onLogin={(user) => {
           setCurrentUser(user);
-          setIsLoggedIn(true);
+
+          // Si es un operador y tiene operatorId, verificar que exista en los datos
+          if (user.role === 'operator' && user.operatorId) {
+            setAppState((prev) => {
+              const operatorExists = prev.operators.some((op) => op.id === user.operatorId);
+
+              if (!operatorExists && user.operatorId) {
+                const newOperator: Operator = {
+                  id: user.operatorId,
+                  name: user.name,
+                  email: user.email,
+                  phone: '',
+                  createdAt: new Date().toISOString(),
+                  isActive: true,
+                  settings: {
+                    groupBaseName: `Grupo ${user.name}`,
+                    groupPhoto: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop',
+                    maxClientsPerGroup: 30,
+                    botRules: {
+                      onlyActiveDriversCanTakeServices: true,
+                      blockBannedInteraction: true,
+                      autoRemoveFromGroupsOnBan: true,
+                      blockServicesForBannedClients: true,
+                    },
+                  },
+                };
+
+                console.log('✅ Creando nuevo operador para el usuario:', newOperator);
+
+                return {
+                  ...prev,
+                  operators: [...prev.operators, newOperator],
+                };
+              }
+
+              return prev;
+            });
+          }
         }}
       />
     );
   }
 
-  const navigate = (view: string, id?: string) => {
-    setCurrentView(view);
-    if (view === 'operator-detail' && id) setSelectedOperatorId(id);
+  const handleSelectOperator = (id: string) => {
+    setSelectedOperatorId(id);
   };
 
   // Función para agregar conductor
@@ -341,6 +440,7 @@ export default function App() {
   };
 
   // Función para levantar veto
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const unbanNumber = (bannedId: string) => {
     const banned = appState.bannedNumbers.find((b) => b.id === bannedId);
     if (!banned) return;
@@ -432,108 +532,37 @@ export default function App() {
 
   const currentOperatorId = currentUser.role === 'operator' ? currentUser.operatorId : selectedOperatorId;
 
+  // Debug logging
+  console.log('🔍 Current User:', currentUser);
+  console.log('🏢 Current Operator ID:', currentOperatorId);
+  console.log('📋 Available Operators:', appState.operators.map(o => ({ id: o.id, name: o.name })));
+
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {currentUser.role === 'super_admin' ? (
-        <SuperAdminSidebar currentView={currentView} onNavigate={navigate} />
-      ) : (
-        <OperatorSidebar currentView={currentView} onNavigate={navigate} userName={currentUser.name} />
-      )}
-
-      <div className="flex-1 overflow-auto">
-        {/* Super Admin Views */}
-        {currentUser.role === 'super_admin' && currentView === 'dashboard' && (
-          <SuperAdminDashboard appState={appState} onNavigate={navigate} />
-        )}
-        {currentUser.role === 'super_admin' && currentView === 'operators' && (
-          <OperatorsList operators={appState.operators} onSelectOperator={(id) => navigate('operator-detail', id)} onCreateOperator={createOperator} />
-        )}
-        {currentUser.role === 'super_admin' && currentView === 'operator-detail' && selectedOperatorId && (
-          <OperatorDetail
-            operator={appState.operators.find((o) => o.id === selectedOperatorId)!}
-            drivers={appState.drivers.filter((d) => d.operatorId === selectedOperatorId)}
-            clients={appState.clients.filter((c) => c.operatorId === selectedOperatorId)}
-            groups={appState.groups.filter((g) => g.operatorId === selectedOperatorId)}
-            onBack={() => navigate('operators')}
-            onUpdateSettings={updateOperatorSettings}
+    <Routes>
+      <Route path="/" element={<Navigate to={currentUser.role === 'admin' ? '/admin/dashboard' : '/operator/dashboard'} replace />} />
+      <Route
+        path="/*"
+        element={
+          <AppRoutes
+            appState={appState}
+            currentOperatorId={currentOperatorId || null}
+            selectedOperatorId={selectedOperatorId}
+            onSelectOperator={handleSelectOperator}
+            createOperator={createOperator}
+            updateOperatorSettings={updateOperatorSettings}
+            addDriver={(phone, name, document, photo) =>
+              addDriver(currentOperatorId || '', phone, name, document, photo)
+            }
+            addClient={(phone, name) => addClient(currentOperatorId || '', phone, name)}
+            updateDriver={updateDriver}
+            banDriver={banDriver}
+            banClient={banClient}
+            removeDriverFromGroup={removeDriverFromGroup}
+            removeClientFromGroup={removeClientFromGroup}
+            updateWhatsAppConnection={updateWhatsAppConnection}
           />
-        )}
-
-        {/* Operator Views */}
-        {currentUser.role === 'operator' && currentView === 'dashboard' && currentOperatorId && (
-          <OperatorDashboard
-            operator={appState.operators.find((o) => o.id === currentOperatorId)!}
-            drivers={appState.drivers.filter((d) => d.operatorId === currentOperatorId)}
-            clients={appState.clients.filter((c) => c.operatorId === currentOperatorId)}
-            groups={appState.groups.filter((g) => g.operatorId === currentOperatorId)}
-            bannedNumbers={appState.bannedNumbers.filter((b) => b.operatorId === currentOperatorId)}
-          />
-        )}
-        {currentUser.role === 'operator' && currentView === 'whatsapp' && currentOperatorId && (
-          <WhatsAppConnection
-            operator={appState.operators.find((o) => o.id === currentOperatorId)!}
-            onUpdateConnection={updateWhatsAppConnection}
-          />
-        )}
-        {currentUser.role === 'operator' && currentView === 'drivers' && currentOperatorId && (
-          <OperatorDriversList
-            drivers={appState.drivers.filter((d) => d.operatorId === currentOperatorId)}
-            groups={appState.groups.filter((g) => g.operatorId === currentOperatorId)}
-            onUpdateDriver={updateDriver}
-            onBanDriver={banDriver}
-            onAddDriver={(phone, name, document, photo) => addDriver(currentOperatorId, phone, name, document, photo)}
-          />
-        )}
-        {currentUser.role === 'operator' && currentView === 'clients' && currentOperatorId && (
-          <OperatorClientsList
-            clients={appState.clients.filter((c) => c.operatorId === currentOperatorId)}
-            groups={appState.groups.filter((g) => g.operatorId === currentOperatorId)}
-            onBanClient={banClient}
-            onAddClient={(phone, name) => addClient(currentOperatorId, phone, name)}
-          />
-        )}
-        {currentUser.role === 'operator' && currentView === 'groups' && currentOperatorId && (
-          <OperatorGroupsList
-            groups={appState.groups.filter((g) => g.operatorId === currentOperatorId)}
-            drivers={appState.drivers.filter((d) => d.operatorId === currentOperatorId)}
-            clients={appState.clients.filter((c) => c.operatorId === currentOperatorId)}
-            onSelectGroup={(id) => navigate('group-detail', id)}
-          />
-        )}
-        {currentUser.role === 'operator' && currentView === 'group-detail' && selectedOperatorId && (
-          <OperatorGroupDetail
-            group={appState.groups.find((g) => g.id === selectedOperatorId)!}
-            drivers={appState.drivers}
-            clients={appState.clients}
-            onBack={() => navigate('groups')}
-            onRemoveDriver={removeDriverFromGroup}
-            onRemoveClient={removeClientFromGroup}
-          />
-        )}
-        {currentUser.role === 'operator' && currentView === 'banned' && currentOperatorId && (
-          <div className="p-6 md:p-8">
-            <h1 className="text-gray-900 mb-2">Números Vetados</h1>
-            <p className="text-gray-600 mb-6">Gestión de conductores y clientes vetados</p>
-            {/* Componente de números vetados aquí */}
-          </div>
-        )}
-        {currentUser.role === 'operator' && currentView === 'settings' && currentOperatorId && (
-          <OperatorSettings
-            operator={appState.operators.find((o) => o.id === currentOperatorId)!}
-            onUpdateSettings={updateOperatorSettings}
-          />
-        )}
-      </div>
-
-      {/* Modal para agregar miembros */}
-      {showAddMemberModal && (
-        <AddMemberModal
-          onClose={() => setShowAddMemberModal(false)}
-          onAddDriver={addDriver}
-          onAddClient={addClient}
-          operatorId={currentOperatorId || ''}
-        />
-      )}
-    </div>
+        }
+      />
+    </Routes>
   );
 }
